@@ -13,3 +13,12 @@ Pose pooling 3d Convolutional Neural Network (I3D) for isolated sign word recogn
 ```
 ## Requirements
 Python, PyTorch
+
+## Training the Network
+1. Download and preprocess the data from https://github.com/dxli94/WLASL
+2. Put the preprocessed data in a directory titled such as ```downloaded_data```
+3. Set few variables in the __main__ section of training script titled as ```train_network.py```
+    - root : location where preprocessed data saved
+    - save_model : location where checkpoints will be stored during the training process
+    - train_split & configuration files : which subset of WLASL dataset used in training procedure
+    - weights : this variables points to a pre-trained weight stored under ```weights``` directory
