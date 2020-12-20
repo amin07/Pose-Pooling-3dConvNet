@@ -15,7 +15,7 @@ from configs import Config
 from pytorch_i3d import LayersPoseLocalI3d
 
 
-from datasets.nslt_dataset import PoseRgbDataset as Dataset
+from datasets.rgb_pose_dataset import PoseRgbDataset as Dataset
 parser = argparse.ArgumentParser()
 parser.add_argument('-mode', type=str, help='rgb or flow')
 parser.add_argument('-save_model', type=str)

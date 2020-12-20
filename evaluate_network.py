@@ -16,7 +16,7 @@ import numpy as np
 import torch.nn.functional as F
 from pytorch_i3d import LayersPoseLocalI3d
 
-from datasets.nslt_dataset_all import PoseRgbTestDataset as Dataset
+from datasets.rgb_pose_dataset_test import PoseRgbTestDataset as Dataset
 import cv2
 
 parser = argparse.ArgumentParser()
@@ -39,28 +39,6 @@ args = parser.parse_args()
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = '{}'.format(args.gpu)
 
-def load_rgb_frames_from_video(video_path, start=0, num=-1):
-    vidcap = cv2.VideoCapture(video_path)
-    # vidcap = cv2.VideoCapture('/home/dxli/Desktop/dm_256.mp4')
-
-    frames = []
-
-    vidcap.set(cv2.CAP_PROP_POS_FRAMES, start)
-    if num == -1:
-        num = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    for offset in range(num):
-        success, img = vidcap.read()
-
-        w, h, c = img.shape
-        sc = 224 / w
-        img = cv2.resize(img, dsize=(0, 0), fx=sc, fy=sc)
-
-        img = (img / 255.) * 2 - 1
-
-        frames.append(img)
-
-    return torch.Tensor(np.asarray(frames, dtype=np.float32))
 
 
 def get_fused_logits(video_id, logit_loc, fusion='mean'):
@@ -323,177 +301,6 @@ def run(init_lr=0.1,
         for j in range(confusion_matrix.shape[1]):
           if confusion_matrix[i, j] > 0.:
             print (i, j, confusion_matrix[i, j])
-
-
-def ensemble(mode, root, train_split, weights, num_classes):
-    # setup dataset
-    test_transforms = transforms.Compose([videotransforms.CenterCrop(224)])
-    # test_transforms = transforms.Compose([])
-
-    val_dataset = Dataset(train_split, 'test', root, mode, test_transforms)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=1,
-                                                 shuffle=False, num_workers=2,
-                                                 pin_memory=False)
-
-    dataloaders = {'test': val_dataloader}
-    datasets = {'test': val_dataset}
-
-    # setup the model
-    if mode == 'flow':
-        i3d = InceptionI3d(400, in_channels=2)
-        i3d.load_state_dict(torch.load('weights/flow_imagenet.pt'))
-    else:
-        i3d = InceptionI3d(400, in_channels=3)
-        i3d.load_state_dict(torch.load('weights/rgb_imagenet.pt'))
-    i3d.replace_logits(num_classes)
-    i3d.load_state_dict(torch.load(weights))  # nslt_2000_000700.pt nslt_1000_010800 nslt_300_005100.pt(best_results)  nslt_300_005500.pt(results_reported) nslt_2000_011400
-    i3d.cuda()
-    i3d = nn.DataParallel(i3d)
-    i3d.eval()
-
-    correct = 0
-    correct_5 = 0
-    correct_10 = 0
-    # confusion_matrix = np.zeros((num_classes,num_classes), dtype=np.int)
-
-    top1_fp = np.zeros(num_classes, dtype=np.int)
-    top1_tp = np.zeros(num_classes, dtype=np.int)
-
-    top5_fp = np.zeros(num_classes, dtype=np.int)
-    top5_tp = np.zeros(num_classes, dtype=np.int)
-
-    top10_fp = np.zeros(num_classes, dtype=np.int)
-    top10_tp = np.zeros(num_classes, dtype=np.int)
-
-    for data in dataloaders["test"]:
-        inputs, labels, video_id = data  # inputs: b, c, t, h, w
-
-        t = inputs.size(2)
-        num = 64
-        if t > num:
-            num_segments = math.floor(t / num)
-
-            segments = []
-            for k in range(num_segments):
-                segments.append(inputs[:, :, k*num: (k+1)*num, :, :])
-
-            segments = torch.cat(segments, dim=0)
-            per_frame_logits = i3d(segments)
-
-            predictions = torch.mean(per_frame_logits, dim=2)
-
-            if predictions.shape[0] > 1:
-                predictions = torch.mean(predictions, dim=0)
-
-        else:
-            per_frame_logits = i3d(inputs)
-            predictions = torch.mean(per_frame_logits, dim=2)[0]
-
-        out_labels = np.argsort(predictions.cpu().detach().numpy())
-
-        if labels[0].item() in out_labels[-5:]:
-            correct_5 += 1
-            top5_tp[labels[0].item()] += 1
-        else:
-            top5_fp[labels[0].item()] += 1
-        if labels[0].item() in out_labels[-10:]:
-            correct_10 += 1
-            top10_tp[labels[0].item()] += 1
-        else:
-            top10_fp[labels[0].item()] += 1
-        if torch.argmax(predictions).item() == labels[0].item():
-            correct += 1
-            top1_tp[labels[0].item()] += 1
-        else:
-            top1_fp[labels[0].item()] += 1
-        print(video_id, float(correct) / len(dataloaders["test"]), float(correct_5) / len(dataloaders["test"]),
-              float(correct_10) / len(dataloaders["test"]))
-
-    top1_per_class = np.mean(top1_tp / (top1_tp + top1_fp))
-    top5_per_class = np.mean(top5_tp / (top5_tp + top5_fp))
-    top10_per_class = np.mean(top10_tp / (top10_tp + top10_fp))
-    print('top-k average per class acc: {}, {}, {}'.format(top1_per_class, top5_per_class, top10_per_class))
-
-
-def run_on_tensor(weights, ip_tensor, num_classes):
-    i3d = InceptionI3d(400, in_channels=3)
-    # i3d.load_state_dict(torch.load('models/rgb_imagenet.pt'))
-    i3d.replace_logits(num_classes)
-    i3d.load_state_dict(torch.load(weights))  # nslt_2000_000700.pt nslt_1000_010800 nslt_300_005100.pt(best_results)  nslt_300_005500.pt(results_reported) nslt_2000_011400
-    i3d.cuda()
-    i3d = nn.DataParallel(i3d)
-    i3d.eval()
-    t = ip_tensor.shape[2]
-    ip_tensor.cuda()
-    per_frame_logits = i3d(ip_tensor)
-    predictions = F.upsample(per_frame_logits, t, mode='linear')
-    predictions = predictions.transpose(2, 1)
-    out_labels = np.argsort(predictions.cpu().detach().numpy()[0])
-    plt.plot(range(len(arr)), F.softmax(torch.from_numpy(arr), dim=0).numpy())
-    plt.show()
-    return out_labels
-
-def viz_frame_preds(weights, ip_tensor, num_classes):
-    """ shows prediction of each frames with image  
-        to see how consistent preds are in a video """
-    i3d = InceptionI3d(400, in_channels=3)
-    # i3d.load_state_dict(torch.load('models/rgb_imagenet.pt'))
-
-    i3d.replace_logits(num_classes)
-    i3d.load_state_dict(torch.load(weights))  # nslt_2000_000700.pt nslt_1000_010800 nslt_300_005100.pt(best_results)  nslt_300_005500.pt(results_reported) nslt_2000_011400
-    i3d.cuda()
-    i3d = nn.DataParallel(i3d)
-    i3d.eval()
-
-    t = ip_tensor.shape[2]
-    ip_tensor.cuda()
-    per_frame_logits = i3d(ip_tensor)
-    print (per_frame_logits.size())
-    predictions = F.upsample(per_frame_logits, t, mode='linear')
-    sample_f = lambda m, n: [i*n//m + n//(2*m) for i in range(m)]
-    predictions = predictions.transpose(2, 1)
-    out_labels = np.argsort(predictions.cpu().detach().numpy()[0])
-    out_im = ip_tensor[0].permute(1, 2, 3, 0).cpu().detach().numpy()
-    out_im = [im for im in np.array(((out_im+1.)/2.)*255., dtype=np.uint8)]  ## reverse norm, see dataset file
-    #print (out_im.shape)
-    sample_ids = sample_f(per_frame_logits.size(2), t)
-    #out_im = [out_im[i] for i in sample_ids]
-    hstacks_im, vstack_im = [], []
-    for j, i in enumerate(sample_ids):
-      #print (out_im[i].shape, out_im[i][0,0], out_im[i].dtype)
-      out_im[i] = cv2.cvtColor(cv2.cvtColor(out_im[i], cv2.COLOR_BGR2RGB), cv2.COLOR_BGR2RGB)
-      #print (out_im[i].shape, out_im[i][0,0], out_im[i].dtype)
-      #print (out_im[i])
-      max_ind = out_labels[i][-1]
-      max_logits = predictions.cpu().detach().numpy()[0][i][max_ind]
-      out_im[i] = cv2.putText(out_im[i], str(max_ind)+str(', {:.2f}'.format(max_logits)), (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (225, 0, 0), 2)
-      if hstacks_im and j%6==0:
-        vstack_im.append(np.hstack(hstacks_im)) 
-        hstacks_im.clear()
-      
-      hstacks_im.append(out_im[i])
-    hstacks_im = hstacks_im + [np.zeros((224, 224, 3), dtype=np.uint8) for _ in range(6-len(hstacks_im))]
-    vstack_im.append(np.hstack(hstacks_im))
-    hstacks_im.clear()
-    print ([v.shape for v in vstack_im])
-    out_im = np.vstack(vstack_im)
-    #print (out_im.shape)
-    cv2.imshow('frame', out_im)
-    #k = cv2.waitKey(-1)
-    #if k==27:
-    #  cv2.destroyAllWindows()
-    #import sys
-    #sys.exit()
-
-    return out_labels
-
-
-
-def get_slide_windows(frames, window_size, stride=1):
-    indices = torch.arange(0, frames.shape[0])
-    window_indices = indices.unfold(0, window_size, stride)
-
-    return frames[window_indices, :, :, :].transpose(1, 2)
 
 
 
