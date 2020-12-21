@@ -198,11 +198,11 @@ def run(configs,
 if __name__ == '__main__':
     # WLASL setting
     mode = 'rgb'
-    #root = {'word': 'data/WLASL2000'}
-    root = {'word': '/home/ahosain/workspace/WLASL/start_kit/all_videos/body_crop_videos/'}    ## NEED CHANGE 
+    root = {'word': '/home/ahosain/workspace/WLASL/start_kit/all_videos/body_crop_videos/'}
     save_model = 'checkpoints/'
     train_split = 'preprocess/nslt_100.json'
-    weights = '/home/ahosain/workspace/WLASL/i3d_wlsl/gmu_asl_weights/gmuasl_51_alamin_005938_0.911284.pt'    ## NEED to change
+    #weights = 'weights/pretrained_weight.pt' 
+    weights = 'weights/rgb_charades.pt' 
     config_file = 'configfiles/asl100.ini'
     configs = Config(config_file)
     print(root, train_split)
