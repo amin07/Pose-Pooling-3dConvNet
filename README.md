@@ -32,7 +32,9 @@ Most of the base code scripts and data are obtained from [WLASL](https://github.
 Evaluation can be done in different ways
 ### Evaluation on a single I3D branch
 1. Need to specify a pre-trained model using ```-checkpoint/-ckpt``` option
-2. For example the evaluation command will be ```python evaluate_network.py -end_point <I3D Endpoint> -checkpoint <Saved Checkpoint Name>```
+2. For example the evaluation command will be ```python evaluate_network.py -end_point <opt1> -checkpoint <opt2>```
+    - opt1 : a valid end point name from I3D network, some examples are ```Mixed_4f, Mixed_4b, Mixed_5b```
+    - opt2 : a saved checkpoint name, the script expects the specified checkpoint is under the ```saved_checkpoint``` directory
 3. By default, this script expects the pre-trained model will be in the ```saved_checkpoint``` directory
 4. During the training, checkpoints are saved in ```checkpoints``` directory, hence to evaluate a checkpoint you need to copy to ```saved_checkpoint``` directory
 
@@ -40,8 +42,6 @@ Evaluation can be done in different ways
 In this process, we have to first save logits from different branches using different trained classifier for those branches. 
 #### Saving Logits from a specific branch
   - ```python evaluate_network.py -end_point <opt1> -checkpoint <opt2> -run_mode <opt3> -logit_loc <opt4>```
-    - opt1 : a valid end point name from I3D network, some examples are ```Mixed_4f, Mixed_4b, Mixed_5b```
-    - opt2 : a saved checkpoint name, the script expects the specified checkpoint is under the ```saved_checkpoint``` directory
     - opt3 : mode of running this script, this case the value is ```save_logits```
     - opt4 : a complete direcotry location where logits for each test video will be stored
 #### Aggregating scores from different branches
