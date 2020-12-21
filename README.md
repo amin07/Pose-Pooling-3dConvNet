@@ -2,6 +2,9 @@
 Pose pooling 3d Convolutional Neural Network (I3D) for isolated sign word recognition from video. <br>
 **Summary :** Sign video classifier (I3D) network uses localized feature maps extracted using pose locations of hands.
 
+## Network Architecture
+![alt text](repo_images/arch.JPG)
+
 ## Publication
 ```
 @article{poseGuidedPoolingHosain,
@@ -49,3 +52,5 @@ In this process, we have to first save logits from different branches using diff
     - opt3 : mode of running this script, this case the value is ```run_logits```
     - opt4 : parent directory location where logits from different branches are saved, one in a specific folder
     - opt5 : a comma separated list of folder location under the directory provided by the option ```opt4```
+## Results
+![alt text](repo_images/results.JPG)
