@@ -18,7 +18,7 @@ Pose pooling 3d Convolutional Neural Network (I3D) for isolated sign word recogn
 Python, PyTorch
 
 ## Mention
-Most of the base code scripts and data are obtained from [WLASL](https://github.com/dxli94/WLASL) project
+Base code scripts and data are obtained from [WLASL](https://github.com/dxli94/WLASL) project repository. See the link for details about the dataset. 
 
 ## Training the Network
 1. Download and preprocess the data from [WLASL](https://github.com/dxli94/WLASL)
@@ -54,3 +54,6 @@ In this process, we have to first save logits from different branches using diff
     - opt5 : a comma separated list of folder location under the directory provided by the option ```opt4```
 ## Results
 ![alt text](repo_images/results.JPG)
+
+## Contact
+website : https://amin07.github.io/
