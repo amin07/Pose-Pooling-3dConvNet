@@ -57,3 +57,4 @@ In this process, we have to first save logits from different branches using diff
 
 ## Contact
 website : https://amin07.github.io/
+email : ahosain AT gmu DOT edu

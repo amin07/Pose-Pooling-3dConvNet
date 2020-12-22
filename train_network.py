@@ -115,18 +115,6 @@ def run(configs,
 
                 # inputs, labels, vid, src = data
                 inputs, pose_inputs, labels, vid = data
-                #print (inputs.size(), labels.size(), vid[0])
-                #vis_sample_with_pose(inputs[0].permute(1,2,3,0).numpy(), pose_inputs[0].numpy())             
-                #continue
-                #inputs = inputs.cuda()
-                #pose_inputs = pose_inputs.cuda()
-                #pl_i3d(inputs, pose_inputs)
-                #import sys
-                #sys.exit()
-                #continue
-                #print (inputs.size(), pose_inputs.size())
-                #import sys
-                #sys.exit() 
                 # wrap them in Variable
                 inputs = inputs.cuda().float()
                 pose_inputs = pose_inputs.cuda().float()
@@ -134,11 +122,6 @@ def run(configs,
                 labels = labels.cuda()
 
                 per_frame_logits = pl_i3d(inputs, pose_inputs)
-                #print (per_frame_logits.size())
-                #import sys
-                #sys.exit()
-                # upsample to input size
-                #AA upsample to last dim, last dim is batchxnum_cx7 for input temp 64
                 per_frame_logits = F.interpolate(per_frame_logits, t, mode='linear')
                 # compute localization loss
                 loc_loss = F.binary_cross_entropy_with_logits(per_frame_logits, labels)
