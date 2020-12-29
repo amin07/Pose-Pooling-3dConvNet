@@ -56,5 +56,5 @@ In this process, we have to first save logits from different branches using diff
 ![alt text](repo_images/results.JPG)
 
 ## Contact
-website : https://amin07.github.io/
+website : https://amin07.github.io/<br>
 email : ahosain AT gmu DOT edu
